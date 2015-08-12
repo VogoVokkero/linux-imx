@@ -144,4 +144,10 @@ config LEDS_TRIGGER_AUDIO
 	  the audio mute and mic-mute changes.
 	  If unsure, say N
 
+config LEDS_TRIGGER_SYNC
+	tristate "LED Synchronized Trigger"
+	depends on LEDS_TRIGGERS
+	help
+	  This allows LEDS to be synchronized agains a kernel timer to a half or one HZ.
+
 endif # LEDS_TRIGGERS
