@@ -661,6 +661,8 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ull-var-som-concerto-board-emmc-wifi.dtb \
 	imx6ull-var-som-concerto-board-nand-sd-card.dtb \
 	imx6ull-var-som-concerto-board-nand-wifi.dtb \
+	imx6ull-var-som-wiv2-board-emmc-sd-card.dtb \
+	imx6ull-var-som-wiv2-board-emmc-wifi.dtb \
 	imx6ull-var-som-symphony-board-emmc-sd-card.dtb \
 	imx6ull-var-som-symphony-board-emmc-wifi.dtb \
 	imx6ull-var-som-symphony-board-nand-sd-card.dtb \

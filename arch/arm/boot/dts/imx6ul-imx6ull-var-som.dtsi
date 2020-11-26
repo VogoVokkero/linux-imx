@@ -13,7 +13,8 @@
 
 	pxp_v4l2 {
 		compatible = "fsl,imx6ul-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
-		status = "okay";
+		/*status = "okay";*/
+		status = "disabled";
 	};
 
 	regulators {
@@ -25,7 +26,8 @@
 			compatible = "regulator-fixed";
 			regulator-name = "touch_3v3_supply";
 			regulator-always-on;
-			status = "okay";
+			/*status = "okay";*/
+			status = "disabled";
 		};
 
 		reg_gpio_dvfs: regulator-gpio {
@@ -39,6 +41,7 @@
 		};
 	};
 
+	/* Concerto Stereo audio*/
 	sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "wm8731audio";
@@ -54,17 +57,18 @@
 			"MICIN", "Mic Bias",
 			"Mic Bias", "Mic Jack";
 		simple-audio-card,format = "i2s";
-		simple-audio-card,bitclock-master = <&sound_master>;
-		simple-audio-card,frame-master = <&sound_master>;
+		//simple-audio-card,bitclock-master = <&sound_master>;
+		//simple-audio-card,frame-master = <&sound_master>;
+		status = "disabled";
 
-		sound_master: simple-audio-card,cpu {
-			sound-dai = <&sai2>;
-		};
+		// sound_master: simple-audio-card,cpu {
+		// 	sound-dai = <&sai2>;
+		// };
 
-		simple-audio-card,codec {
-			sound-dai = <&codec>;
-			system-clock-frequency = <12288000>;
-		};
+		// simple-audio-card,codec {
+		// 	sound-dai = <&codec>;
+		// 	system-clock-frequency = <12288000>;
+		// };
 	};
 };
 
@@ -121,19 +125,12 @@
 	fsl,ldo-bypass = <0>; /* DCDC, ldo-enable */
 };
 
+/* Stereo audio codec */
 &i2c2 {
 	clock_frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
-
-	codec: wm8731@1a {
-		#sound-dai-cells = <0>;
-		compatible = "wlf,wm8731";
-		reg = <0x1a>;
-		clocks = <&clks IMX6UL_CLK_SAI2>;
-		clock-names = "mclk";
-	};
 };
 
 &iomuxc {
@@ -163,7 +160,7 @@
 			MX6UL_PAD_CSI_VSYNC__I2C2_SDA		0x4001b8b0
 		>;
 	};
-
+/*
 	pinctrl_sai2: sai2grp {
 		fsl,pins = <
 			MX6UL_PAD_JTAG_TDI__SAI2_TX_BCLK	0x17088
@@ -173,31 +170,34 @@
 			MX6UL_PAD_JTAG_TMS__SAI2_MCLK		0x17088
 		>;
 	};
-
-	pinctrl_tsc: tscgrp {
+*/
+	/* Touch screen */
+	/*pinctrl_tsc: tscgrp {
 		fsl,pins = <
 			MX6UL_PAD_GPIO1_IO01__GPIO1_IO01	0xb0
 			MX6UL_PAD_GPIO1_IO02__GPIO1_IO02	0xb0
 			MX6UL_PAD_GPIO1_IO03__GPIO1_IO03	0xb0
 			MX6UL_PAD_GPIO1_IO04__GPIO1_IO04	0xb0
 		>;
-	};
+	};*/
 
 	pinctrl_uart2: uart2grp {
 		fsl,pins = <
 			MX6UL_PAD_UART2_TX_DATA__UART2_DCE_TX	0x1b0b1
 			MX6UL_PAD_UART2_RX_DATA__UART2_DCE_RX	0x1b0b1
-			MX6UL_PAD_UART2_CTS_B__UART2_DCE_CTS	0x1b0b1
-			MX6UL_PAD_UART2_RTS_B__UART2_DCE_RTS	0x1b0b1
+			/*MX6UL_PAD_UART2_CTS_B__UART2_DCE_CTS	0x1b0b1*/
+			/*MX6UL_PAD_UART2_RTS_B__UART2_DCE_RTS	0x1b0b1*/
 		>;
 	};
 };
 
 &pxp {
-	status = "okay";
+	/*status = "okay";*/
+	status = "disabled";
 };
 
-&sai2 {
+/* SAI 2 Audio stereo */
+/*&sai2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai2>;
 	assigned-clocks = <&clks IMX6UL_CLK_SAI2_SEL>,
@@ -206,12 +206,15 @@
 	assigned-clock-rates = <0>, <12288000>;
 	fsl,sai-mclk-direction-output;
 	status = "okay";
-};
+};*/
 
+/* Power BP ????? */
 &snvs_poweroff {
 	status = "okay";
 };
 
+/* Touch screen */
+/*
 &tsc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_tsc>;
@@ -220,11 +223,12 @@
 	pre_charge_time = <0xfff>;
 	status = "okay";
 };
+*/
 
-/* Bluetooth UART */
+/* UART STM <-> DSP ; was: Bluetooth UART */
 &uart2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
-	uart-has-rtscts;
+	/*uart-has-rtscts;*/
 	status = "okay";
 };

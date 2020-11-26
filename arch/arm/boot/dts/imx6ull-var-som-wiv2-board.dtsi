@@ -1,0 +1,26 @@
+/*
+ * Copyright (C) 2019 Variscite Ltd. - https://www.variscite.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "imx6ul-imx6ull-var-som-wiv2-board.dtsi"
+
+// &iomuxc_snvs {
+// 	/* BP wake up on concerto board */
+// 	pinctrl_gpio_keys_snvs: gpio_keys_snvsgrp {
+// 		fsl,pins = <
+// 			MX6ULL_PAD_SNVS_TAMPER8__GPIO5_IO08	0x17059 /* Wakeup */
+// 		>;
+// 	};
+// };
+
+/* ttymxc4 UART --> STM 32 (pour web aka configurateur)*/
+&uart5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart5>;
+	/*fsl,uart-has-rtscts;*/
+	status = "okay";
+};

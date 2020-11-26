@@ -1,0 +1,91 @@
+#include "imx6ul-pinfunc.h"
+
+
+
+
+
+
+
+/ {
+
+ sound2 {
+  compatible = "simple-audio-card";
+  simple-audio-card,name = "axc-avb";
+  simple-audio-card,widgets =
+   "Line", "Radio OStream",
+   "Line", "Radio IStream";
+  simple-audio-card,routing =
+   "Radio OStream", "VOUT1",
+   "Radio OStream", "VOUT2",
+   "Radio OStream", "VOUT3",
+   "Radio OStream", "VOUT4",
+   "VINL1", "Radio IStream",
+   "VINL2", "Radio IStream",
+   "VINL3", "Radio IStream",
+   "VINL4", "Radio IStream";
+  simple-audio-card,format = "left_j";
+  simple-audio-card,bitclock-master = <&sound2_master>;
+  simple-audio-card,frame-master = <&sound2_master>;
+  //simple-audio-card,frame-inversion;
+  //simple-audio-card,bitclock-inversion;
+
+
+  simple-audio-card,cpu {
+   sound-dai = <&sai1>;
+   dai-tdm-slot-num = <4>;
+   dai-tdm-slot-width = <32>;
+  };
+
+  sound2_master: simple-audio-card,codec {
+   sound-dai = <&codec2>;
+   dai-tdm-slot-num = <4>;
+   dai-tdm-slot-width = <32>;
+  };
+ };
+
+
+ codec2: axc-codec {
+  #sound-dai-cells = <0>;
+  compatible = "auvi,axc-avb";
+
+  clocks = <&axc_codec_clk>;
+  clock-names = "mclk";
+ };
+ axc_codec_clk: axc-codec-clk {
+  compatible = "fixed-clock";
+  #clock-cells = <0>;
+  clock-frequency = <12288000>;
+ };
+
+};
+
+
+&sai1 {
+ pinctrl-names = "default";
+ pinctrl-0 = <&pinctrl_sai1>;
+ assigned-clocks = <&clks 70>,
+     <&clks 178>;
+ assigned-clock-parents = <&clks 50>;
+ assigned-clock-rates = <0>, <12288000>;
+
+//lsb-first;
+
+
+
+ status = "okay";
+};
+
+&iomuxc {
+ pinctrl_sai1: sai1grp {
+  fsl,pins = <
+   MX6UL_PAD_CSI_DATA05__SAI1_TX_BCLK	0x17088 /*SAI#A_TXC*/
+   MX6UL_PAD_CSI_DATA04__SAI1_TX_SYNC	0x17088 /*SAI#A_TXFS*/
+   MX6UL_PAD_CSI_DATA07__SAI1_TX_DATA	0x11088 /*SAI#A_TXD*/
+   MX6UL_PAD_CSI_DATA03__SAI1_RX_BCLK	0x17088 /*SAI#A_RXC*/
+   MX6UL_PAD_CSI_DATA06__SAI1_RX_DATA	0x11088 /*SAI#A_RXD*/
+   /*MX6UL_PAD_CSI_DATA01__SAI1_MCLK 0x17088 /*UART#C_RX*/
+
+  >;
+ };
+};
+
