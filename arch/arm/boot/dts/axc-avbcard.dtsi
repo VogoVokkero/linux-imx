@@ -1,11 +1,5 @@
 #include "imx6ul-pinfunc.h"
 
-
-
-
-
-
-
 / {
 
  sound2 {
@@ -29,7 +23,6 @@
   //simple-audio-card,frame-inversion;
   //simple-audio-card,bitclock-inversion;
 
-
   simple-audio-card,cpu {
    sound-dai = <&sai1>;
    dai-tdm-slot-num = <4>;
@@ -43,7 +36,6 @@
   };
  };
 
-
  codec2: axc-codec {
   #sound-dai-cells = <0>;
   compatible = "auvi,axc-avb";
@@ -51,10 +43,11 @@
   clocks = <&axc_codec_clk>;
   clock-names = "mclk";
  };
+
  axc_codec_clk: axc-codec-clk {
   compatible = "fixed-clock";
   #clock-cells = <0>;
-  clock-frequency = <12288000>;
+  clock-frequency = <6144000>;
  };
 
 };
@@ -66,14 +59,12 @@
  assigned-clocks = <&clks 70>,
      <&clks 178>;
  assigned-clock-parents = <&clks 50>;
- assigned-clock-rates = <0>, <12288000>;
-
+ assigned-clock-rates = <0>, <6144000>;
 //lsb-first;
-
-
 
  status = "okay";
 };
+
 
 &iomuxc {
  pinctrl_sai1: sai1grp {
@@ -83,8 +74,6 @@
    MX6UL_PAD_CSI_DATA07__SAI1_TX_DATA	0x11088 /*SAI#A_TXD*/
    MX6UL_PAD_CSI_DATA03__SAI1_RX_BCLK	0x17088 /*SAI#A_RXC*/
    MX6UL_PAD_CSI_DATA06__SAI1_RX_DATA	0x11088 /*SAI#A_RXD*/
-   /*MX6UL_PAD_CSI_DATA01__SAI1_MCLK 0x17088 /*UART#C_RX*/
-
   >;
  };
 };

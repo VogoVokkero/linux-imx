@@ -1368,6 +1368,11 @@ static int sdma_set_channel_priority(struct sdma_channel *sdmac,
 		return -EINVAL;
 	}
 
+	if (IMX_DMATYPE_SAI==sdmac->peripheral_type) {
+		priority = MXC_SDMA_MAX_PRIORITY-1;
+		printk(KERN_INFO "ESG-190: sdma_set_channel_priority IMX_DMATYPE_SAI (%d) = %d\n", channel, priority);
+	};
+
 	writel_relaxed(priority, sdma->regs + SDMA_CHNPRI_0 + 4 * channel);
 
 	return 0;
