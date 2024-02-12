@@ -5,12 +5,18 @@
  * Copyright (C) 2006 SWAPP
  *	Andrea Paterniani <a.paterniani@swapp-eng.it>
  * Copyright (C) 2007 David Brownell (simplification, cleanup)
+ * Copyright (C) 2024 VOGO S.A.S (parts)
+ *
+ * based on spidev.c
+ *
+ * License terms: GNU General Public License (GPL) version 2
  */
-
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/ioctl.h>
 #include <linux/fs.h>
+#include <linux/file.h>
+#include <linux/poll.h>
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/list.h>
@@ -27,6 +33,9 @@
 
 #include <linux/uaccess.h>
 
+#include <linux/interrupt.h>
+#include <linux/gpio/consumer.h>
+#include <linux/jiffies.h>
 
 /*
  * This supports access to SPI devices using normal userspace I/O calls.
@@ -76,6 +85,12 @@ struct spidev_data {
 	u8			*tx_buffer;
 	u8			*rx_buffer;
 	u32			speed_hz;
+
+	/* handling of master with slave-ready GPIO scheme. */
+	struct gpio_desc *sready_gpio;
+	int sready_gpio_irq;
+	wait_queue_head_t waitq;
+	u32 sready_msg_counter;
 };
 
 static LIST_HEAD(device_list);
@@ -309,6 +324,89 @@ done:
 	return status;
 }
 
+
+static irqreturn_t spidev_sready_handler(int irq, void *private)
+{
+	struct spidev_data *spidev = private;
+
+	if (0 < spidev->users)
+	{
+		spidev->sready_msg_counter++;
+		wake_up_interruptible(&spidev->waitq);
+	}
+
+	return IRQ_HANDLED;
+}
+
+static int spidev_sready_probe(struct spidev_data *spidev)
+{
+	int ret = 0;
+
+	/* Attempt to grab the GPIO */
+	if (NULL == spidev->sready_gpio) {
+		spidev->sready_gpio = devm_gpiod_get_optional(&spidev->spi->dev, "sready", GPIOD_IN);
+	}
+
+	/* Initialize the wait queue on response to the GPIO rising event. */
+	if (NULL != spidev->sready_gpio) {
+		init_waitqueue_head(&spidev->waitq);
+
+		spidev->sready_msg_counter = 0UL;
+
+		gpiod_direction_input(spidev->sready_gpio);
+
+		spidev->sready_gpio_irq = gpiod_to_irq(spidev->sready_gpio);
+
+		if (spidev->sready_gpio_irq < 0)
+			dev_warn(&spidev->spi->dev, "Can't get irq: %d\n",
+					spidev->sready_gpio_irq);
+		else {
+			ret = devm_request_irq(&spidev->spi->dev,
+					spidev->sready_gpio_irq,
+					spidev_sready_handler,
+					IRQF_TRIGGER_FALLING, "sready",
+					spidev);
+			if (0 != ret)
+				dev_err(&spidev->spi->dev,
+					"cannot request irq");
+		}
+	}
+
+	return ret;
+}
+
+/* Wait if a sready GPIO was provided. */
+static __poll_t _wait_if_sready_provided(struct spidev_data *spidev)
+{
+	__poll_t events = EPOLLHUP;
+	if ((NULL != spidev) && (NULL != spidev->sready_gpio))
+	{
+		u32 elapsed = jiffies;
+
+		if (0 < wait_event_interruptible(spidev->waitq, (0UL < spidev->sready_msg_counter))) {
+			events = EPOLLIN | EPOLLRDNORM; // mapps to select READ_FD type;
+		} else {
+			printk_ratelimited(KERN_ERR "spidev_poll wait failed (wrong FD_SET?, needs EPOLLIN)\n");
+		}
+
+		if (unlikely((1 < (jiffies - elapsed)) || (1 < spidev->sready_msg_counter)))
+		{
+			printk_ratelimited(KERN_ERR	"spidev_poll: long timelaps %lu x10ms, spidev->sready_msg_counter = %lu\n",
+						jiffies - elapsed,
+						spidev->sready_msg_counter);
+		}
+
+		spidev->sready_msg_counter = 0UL;
+	}
+
+	return events;
+}
+
+static __poll_t spidev_poll(struct file *filp, poll_table *wait)
+{
+	return _wait_if_sready_provided((struct spidev_data *)filp->private_data);
+}
+
 static struct spi_ioc_transfer *
 spidev_get_ioc_message(unsigned int cmd, struct spi_ioc_transfer __user *u_ioc,
 		unsigned *n_ioc)
@@ -335,11 +433,11 @@ spidev_get_ioc_message(unsigned int cmd, struct spi_ioc_transfer __user *u_ioc,
 static long
 spidev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	int			retval = 0;
-	struct spidev_data	*spidev;
-	struct spi_device	*spi;
-	u32			tmp;
-	unsigned		n_ioc;
+	int	retval = 0;
+	struct spidev_data *spidev;
+	struct spi_device *spi;
+	u32	tmp;
+	unsigned int n_ioc;
 	struct spi_ioc_transfer	*ioc;
 
 	/* Check type and command number */
@@ -456,20 +554,29 @@ spidev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	default:
-		/* segmented and/or full-duplex I/O request */
-		/* Check message and copy into scratch area */
-		ioc = spidev_get_ioc_message(cmd,
-				(struct spi_ioc_transfer __user *)arg, &n_ioc);
-		if (IS_ERR(ioc)) {
-			retval = PTR_ERR(ioc);
-			break;
-		}
-		if (!ioc)
-			break;	/* n_ioc is also 0 */
+		{
+			/* If a save ready gpio was provided, use it to wait
+			 * this improves dramatically realtime on most apps, by
+			 * removing the poll/read/seek bombing required fo each
+			 * GPIO assertion.
+			 **/
+			// (void)_wait_if_sready_provided(spidev);
 
-		/* translate to spi_message, execute */
-		retval = spidev_message(spidev, ioc, n_ioc);
-		kfree(ioc);
+			/* segmented and/or full-duplex I/O request */
+			ioc = spidev_get_ioc_message(cmd,
+					(struct spi_ioc_transfer __user *)arg, &n_ioc);
+			if (IS_ERR(ioc)) {
+				retval = PTR_ERR(ioc);
+				break;
+			}
+			if (!ioc)
+				break;	/* n_ioc is also 0 */
+
+			/* translate to spi_message, execute */
+			retval = spidev_message(spidev, ioc, n_ioc);
+
+			kfree(ioc);
+		}
 		break;
 	}
 
@@ -640,6 +747,7 @@ static const struct file_operations spidev_fops = {
 	 */
 	.write =	spidev_write,
 	.read =		spidev_read,
+	.poll =		spidev_poll,
 	.unlocked_ioctl = spidev_ioctl,
 	.compat_ioctl = spidev_compat_ioctl,
 	.open =		spidev_open,
@@ -764,9 +872,14 @@ static int spidev_probe(struct spi_device *spi)
 
 	spidev->speed_hz = spi->max_speed_hz;
 
-	if (status == 0)
+	if (status == 0) {
 		spi_set_drvdata(spi, spidev);
-	else
+
+		/* if no slave ready is provided, returns 0 */
+		status = spidev_sready_probe(spidev);
+	}
+
+	if (status != 0)
 		kfree(spidev);
 
 	return status;
