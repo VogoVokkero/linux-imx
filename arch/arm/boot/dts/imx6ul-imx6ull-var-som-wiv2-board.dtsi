@@ -396,7 +396,7 @@
 };
 */
 
-/* SPI STM 32*/
+/* SPI STM 32 : Master with Slave-Ready GPIO */
 &ecspi4 {
 	/*fsl,spi-num-chipselects = <1>;
 	cs-gpios = <&gpio2 15 0>;*/
@@ -405,6 +405,7 @@
 	/*#address-cells = <0>;
 	spi-slave;*/
 	status = "okay";
+	sready-gpios = <&gpio2 15 GPIO_ACTIVE_LOW>;
 
     /*slave{
         compatible = "spidev";
@@ -412,14 +413,15 @@
 		status = "okay";
     };*/
 	spidev0: spi@0 {
-        compatible = "var,spidev";
-        spi-max-frequency = <4000000>;
-        reg = <0>;
+		compatible = "var,spidev";
+		spi-max-frequency = <4000000>;
+		reg = <0>;
 		status = "okay";
+		sready-gpios = <&gpio2 15 GPIO_ACTIVE_LOW>;
     };
 };
 
-/* SPI AVBx7 */
+/* SPI AVBx7 : Master */
 &ecspi2 {
 	fsl,spi-num-chipselects = <1>;
 	cs-gpios = <0>;
