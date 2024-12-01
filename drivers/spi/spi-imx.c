@@ -1655,6 +1655,9 @@ static int spi_imx_probe(struct platform_device *pdev)
 		spi_drctl = 0;
 	}
 
+	/* provided to tie spi.c layer thanks to spi-bitbang-start */
+	master->rt = of_property_read_bool(np, "spi-realtime");
+
 	platform_set_drvdata(pdev, master);
 
 	master->bits_per_word_mask = SPI_BPW_RANGE_MASK(1, 32);

@@ -1435,7 +1435,7 @@ static void spi_pump_messages(struct kthread_work *work)
  */
 static void spi_set_thread_rt(struct spi_controller *ctlr)
 {
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO / 2 };
+	struct sched_param param = { .sched_priority = 70 };
 
 	dev_info(&ctlr->dev,
 		"will run message pump with realtime priority\n");
